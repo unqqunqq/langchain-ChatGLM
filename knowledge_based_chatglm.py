@@ -8,6 +8,7 @@ from langchain.prompts.chat import (
 from langchain.embeddings.huggingface import HuggingFaceEmbeddings
 from langchain.vectorstores import FAISS
 from langchain.document_loaders import UnstructuredFileLoader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 from chatglm_llm import ChatGLM
 
 embedding_model_dict = {
@@ -20,8 +21,19 @@ chatglm = ChatGLM()
 
 def init_knowledge_vector_store(filepath):
     embeddings = HuggingFaceEmbeddings(model_name=embedding_model_dict["text2vec"], )
-    loader = UnstructuredFileLoader(filepath, mode="elements")
-    docs = loader.load()
+    # mode="elements"参数去除, 使用该参数会导致文本段落切成细碎的句子, 使得上下文语义消失, 改用text_splitter的split_document方法
+    loader = UnstructuredFileLoader(filepath)
+    doc = loader.load()
+
+    # 定义text splitter
+    text_splitter = RecursiveCharacterTextSplitter(
+    chunk_size = 500,
+    chunk_overlap  = 100,
+    length_function = len,
+)
+
+    # 调用text splitter的方法分割文档
+    docs = text_splitter.split_documents([doc])
 
     vector_store = FAISS.from_documents(docs, embeddings)
     return vector_store
